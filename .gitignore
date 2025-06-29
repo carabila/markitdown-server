@@ -170,7 +170,18 @@ logs/
 .pytest_cache/
 *.pid
 
+# Docker files
+.dockerignore
+
+# Docker volumes and data
+uploads/
+logs/
+
 # Application specific
 # Uncomment if you want to ignore uploaded test files
 # test.pdf
-# *.pdf 
+# *.pdf
+
+# Docker environment files
+.env.docker
+docker-compose.override.yml 

@@ -33,6 +33,8 @@ A FastAPI server that converts markdown content using Microsoft's markitdown lib
 
 ## Running the Server
 
+### Option 1: Local Development
+
 Start the server with:
 
 ```bash
@@ -44,6 +46,22 @@ Or run directly:
 ```bash
 python main.py
 ```
+
+### Option 2: Docker (Recommended for Production)
+
+**Quick Start:**
+```bash
+# Using Docker Compose (recommended)
+docker-compose up -d
+
+# Or using Docker directly
+docker build -t markitdown-server .
+docker run -d -p 8000:8000 --name markitdown-server markitdown-server
+```
+
+**Requirements:**
+- Docker and Docker Compose installed
+- See `docker-setup.md` for detailed Docker deployment guide
 
 The server will be available at `http://localhost:8000`
 
