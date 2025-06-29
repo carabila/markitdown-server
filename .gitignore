@@ -184,4 +184,8 @@ logs/
 
 # Docker environment files
 .env.docker
-docker-compose.override.yml 
+docker-compose.override.yml
+
+# Docker Hub helper files (keep these for documentation)
+# docker-hub-readme.md
+# push-to-dockerhub.sh 

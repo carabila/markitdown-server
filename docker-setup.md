@@ -27,6 +27,37 @@ docker-compose logs -f
 docker-compose down
 ```
 
+## 🏗️ **Multi-Architecture Support**
+
+The MarkItDown Server supports multiple CPU architectures:
+
+### Build for Multiple Platforms
+```bash
+# Build and push for both AMD64 and ARM64
+./push-multiarch-dockerhub.sh yourusername
+
+# AMD64 only (Intel/AMD processors)
+./push-multiarch-dockerhub.sh yourusername latest linux/amd64
+
+# ARM64 only (Apple Silicon, Raspberry Pi 4+)
+./push-multiarch-dockerhub.sh yourusername latest linux/arm64
+
+# Test multi-arch build locally (no push)
+./test-multiarch-build.sh
+```
+
+### Platform-Specific Deployment
+```bash
+# AMD64 (most cloud providers, Intel/AMD servers)
+docker run -d -p 8000:8000 --platform linux/amd64 yourusername/markitdown-server
+
+# ARM64 (Apple Silicon, Raspberry Pi 4+)
+docker run -d -p 8000:8000 --platform linux/arm64 yourusername/markitdown-server
+
+# Auto-detect (recommended)
+docker run -d -p 8000:8000 yourusername/markitdown-server
+```
+
 ### Option 2: Using Docker Run
 ```bash
 # Build the image
