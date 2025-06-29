@@ -1,10 +1,12 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 import logging
 import tempfile
 import os
 import mimetypes
 import json
+import base64
 from markitdown import MarkItDown
 
 # Configure logging
@@ -19,6 +21,11 @@ app = FastAPI(
 
 # Initialize MarkItDown converter
 markitdown = MarkItDown()
+
+# Pydantic models for request validation
+class Base64ConvertRequest(BaseModel):
+    content: str  # Base64 encoded file content
+    filename: str = None  # Optional original filename for better format detection
 
 def detect_file_format(content: bytes) -> tuple[str, bool]:
     """
@@ -153,7 +160,16 @@ def detect_office_format(content: bytes) -> str:
 @app.get("/")
 async def root():
     """Health check endpoint"""
-    return {"message": "MarkItDown Server is running", "status": "healthy"}
+    return {
+        "message": "MarkItDown Server is running", 
+        "status": "healthy",
+        "endpoints": {
+            "convert": "POST /convert - Upload raw binary file content",
+            "convert_base64": "POST /convert-base64 - Upload base64-encoded file content with optional filename",
+            "formats": "GET /formats - List supported file formats"
+        },
+        "version": "1.2.0"
+    }
 
 @app.get("/formats")
 async def supported_formats():
@@ -300,6 +316,138 @@ async def convert_document(request: Request):
         raise HTTPException(
             status_code=500,
             detail="Internal server error during conversion"
+        )
+
+@app.post("/convert-base64")
+async def convert_base64_document(request: Base64ConvertRequest):
+    """
+    Convert base64-encoded document content to markdown using markitdown.
+    
+    Accepts a JSON payload with base64-encoded file content.
+    Supports all MarkItDown-compatible formats including:
+    - Documents: PDF, DOCX, XLSX, PPTX, HTML, TXT, RTF, EPUB
+    - Images: JPG, PNG, GIF, BMP, ICO, WebP, TIFF
+    - Audio: WAV, MP3, M4A, FLAC, OGG
+    - Text data: CSV, JSON, XML, TSV, Markdown
+    - Archives: ZIP, TAR, and compressed variants
+    """
+    try:
+        if not request.content:
+            raise HTTPException(status_code=400, detail="No base64 content provided")
+        
+        # Decode base64 content
+        try:
+            raw_content = base64.b64decode(request.content, validate=True)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid base64 content: {str(e)}")
+        
+        if not raw_content:
+            raise HTTPException(status_code=400, detail="Decoded content is empty")
+        
+        # Detect file format
+        file_extension, is_text_format = detect_file_format(raw_content)
+        
+        # If filename is provided, try to use its extension as a hint
+        if request.filename:
+            filename_lower = request.filename.lower()
+            if '.' in filename_lower:
+                filename_ext = '.' + filename_lower.split('.')[-1]
+                # Use filename extension if it seems reasonable and we detected generic format
+                if file_extension in ['.bin', '.txt'] and filename_ext in [
+                    '.pdf', '.docx', '.xlsx', '.pptx', '.html', '.txt', '.rtf', '.epub',
+                    '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.ico', '.webp', '.tiff',
+                    '.wav', '.mp3', '.m4a', '.flac', '.ogg', '.csv', '.json', '.xml', '.tsv', '.md'
+                ]:
+                    file_extension = filename_ext
+                    logger.info(f"Using filename extension hint: {filename_ext}")
+        
+        logger.info(f"Detected format: {file_extension} ({'text' if is_text_format else 'binary'})")
+        
+        temp_file_path = None
+        content_length = len(raw_content)
+        
+        try:
+            if is_text_format:
+                # Handle text-based formats
+                try:
+                    text_content = raw_content.decode('utf-8')
+                    if not text_content.strip():
+                        raise HTTPException(status_code=400, detail="Empty content provided")
+                    
+                    # Create temporary file for text content
+                    with tempfile.NamedTemporaryFile(mode='w', suffix=file_extension, delete=False, encoding='utf-8') as temp_file:
+                        temp_file.write(text_content)
+                        temp_file_path = temp_file.name
+                    
+                    logger.info(f"Processing text content ({len(text_content)} characters, format: {file_extension})")
+                    
+                except UnicodeDecodeError:
+                    raise HTTPException(status_code=400, detail="Invalid text encoding for detected text format")
+            else:
+                # Handle binary formats
+                with tempfile.NamedTemporaryFile(mode='wb', suffix=file_extension, delete=False) as temp_file:
+                    temp_file.write(raw_content)
+                    temp_file_path = temp_file.name
+                
+                logger.info(f"Processing binary content ({content_length} bytes, format: {file_extension})")
+            
+            # Convert using markitdown
+            result = markitdown.convert(temp_file_path)
+            converted_content = result.text_content
+            
+            logger.info(f"Successfully converted {content_length} {'characters' if is_text_format else 'bytes'} to {len(converted_content)} characters")
+            
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": True,
+                    "detected_format": file_extension.lstrip('.'),
+                    "original_filename": request.filename,
+                    "original_length": content_length,
+                    "converted_content": converted_content,
+                    "converted_length": len(converted_content),
+                    "content_type": "text" if is_text_format else "binary"
+                }
+            )
+            
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"MarkItDown conversion failed: {e}")
+            
+            # Check if it's an unsupported format error
+            if "not supported" in error_msg.lower() or "UnsupportedFormatException" in error_msg:
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "error": "Unsupported format for conversion",
+                        "detected_format": file_extension.lstrip('.'),
+                        "original_filename": request.filename,
+                        "message": f"Format '{file_extension.lstrip('.')}' was detected correctly but MarkItDown cannot convert it to markdown",
+                        "suggestion": "This format is detected but not supported by MarkItDown. Check GET /formats for supported vs detection-only formats.",
+                        "supported_alternatives": ["pdf", "docx", "xlsx", "pptx", "html", "csv", "tsv", "md"]
+                    }
+                )
+            else:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to convert {file_extension} content: {str(e)}"
+                )
+        finally:
+            # Clean up the temporary file
+            if temp_file_path:
+                try:
+                    os.unlink(temp_file_path)
+                except OSError:
+                    pass  # Ignore errors if file was already deleted
+            
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in convert-base64 endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error during base64 conversion"
         )
 
 if __name__ == "__main__":
