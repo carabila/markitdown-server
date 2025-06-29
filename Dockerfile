@@ -1,5 +1,5 @@
 # Use Python 3.13 slim image for smaller size
-FROM python:3.13-slim as builder
+FROM python:3.13-slim AS builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
