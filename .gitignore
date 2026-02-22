@@ -175,6 +175,7 @@ logs/
 
 # Docker volumes and data
 response/
+documents/
 logs/
 
 # Application specific
