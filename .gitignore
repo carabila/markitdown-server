@@ -174,7 +174,7 @@ logs/
 .dockerignore
 
 # Docker volumes and data
-uploads/
+response/
 logs/
 
 # Application specific

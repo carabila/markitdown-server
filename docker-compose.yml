@@ -11,13 +11,11 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
-      # Mount a directory for file uploads if needed
       - ./uploads:/app/uploads:ro
-      # Mount logs directory
       - ./logs:/app/logs
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -31,4 +29,4 @@ networks:
 
 volumes:
   markitdown-data:
-    driver: local 
+    driver: local
