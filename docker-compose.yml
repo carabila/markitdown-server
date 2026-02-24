@@ -1,10 +1,9 @@
-version: '3.8'
-
 services:
   markitdown-server:
-    container_name: carabila/markitdown-server
+    image: carabila/markitdown-server:latest
+    container_name: markitdown
     ports:
-      - "8101:8000"
+      - 8101:8000
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
@@ -12,15 +11,17 @@ services:
       - ./logs:/app/logs
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://localhost:8000/health
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
     networks:
       - frontend
-
 networks:
   frontend:
     external: true
-
