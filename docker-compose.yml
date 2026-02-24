@@ -2,12 +2,9 @@ version: '3.8'
 
 services:
   markitdown-server:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: markitdown-server
+    container_name: carabila/markitdown-server
     ports:
-      - "8000:8000"
+      - "8101:8000"
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
@@ -21,12 +18,9 @@ services:
       retries: 3
       start_period: 40s
     networks:
-      - markitdown-network
+      - frontend
 
 networks:
-  markitdown-network:
-    driver: bridge
+  frontend:
+    external: true
 
-volumes:
-  markitdown-data:
-    driver: local
