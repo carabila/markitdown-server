@@ -34,13 +34,8 @@ The MarkItDown Server supports multiple CPU architectures:
 ### Build for Multiple Platforms
 ```bash
 # Build and push for both AMD64 and ARM64
-./push-multiarch-dockerhub.sh yourusername
-
-# AMD64 only (Intel/AMD processors)
-./push-multiarch-dockerhub.sh yourusername latest linux/amd64
-
-# ARM64 only (Apple Silicon, Raspberry Pi 4+)
-./push-multiarch-dockerhub.sh yourusername latest linux/arm64
+docker login
+./scripts/push-docker-variants.sh --namespace yourusername
 
 # Test multi-arch build locally (no push)
 ./test-multiarch-build.sh

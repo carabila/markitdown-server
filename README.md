@@ -49,6 +49,22 @@ Batch example:
 ./scripts/process_documents.sh
 ```
 
+Start service with the standard script (same pattern as other services):
+```bash
+./scripts/start_service.sh
+```
+
+Push to your Docker Hub account using the shared multi-arch workflow:
+```bash
+docker login
+./scripts/push-docker-variants.sh --namespace <your-dockerhub-username>
+```
+
+Optional: choose a different image name or builder:
+```bash
+./scripts/push-docker-variants.sh --namespace <your-dockerhub-username> --image markitdown-server --builder <buildx-builder>
+```
+
 ## Docker
 Build and run:
 ```bash

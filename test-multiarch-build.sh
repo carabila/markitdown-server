@@ -51,7 +51,7 @@ if docker buildx build \
     echo "   ✅ linux/arm64 (Apple Silicon, Raspberry Pi 4+)"
     echo ""
     echo "🚀 Ready to push to Docker Hub with:"
-    echo "   ./push-multiarch-dockerhub.sh yourusername"
+    echo "   ./scripts/push-docker-variants.sh --namespace yourusername"
     
 else
     echo ""
