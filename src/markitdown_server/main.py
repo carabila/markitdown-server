@@ -13,6 +13,7 @@ from markitdown import MarkItDown
 from pydantic import BaseModel
 
 LOGGER = logging.getLogger(__name__)
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".ico", ".webp", ".tiff"}
 
 app = FastAPI(
     title="MarkItDown Server",
@@ -157,7 +158,20 @@ def _convert_bytes_to_markdown(file_bytes: bytes, filename: Optional[str] = None
                 temp_file_path = temp_file.name
 
         result = markitdown.convert(temp_file_path)
-        return (result.text_content or "").strip()
+        markdown = (result.text_content or "").strip()
+        if markdown:
+            return markdown
+
+        if extension in IMAGE_EXTENSIONS:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "No extractable text/metadata found in image. "
+                    "MarkItDown image conversion requires EXIF metadata or an LLM image-description configuration."
+                ),
+            )
+
+        raise HTTPException(status_code=422, detail="Conversion produced empty markdown output")
     except HTTPException:
         raise
     except Exception as exc:
@@ -189,8 +203,6 @@ async def health() -> dict[str, str]:
 async def convert_document(file: UploadFile = File(...)) -> PlainTextResponse:
     data = await file.read()
     markdown = _convert_bytes_to_markdown(data, file.filename)
-    if not markdown:
-        raise HTTPException(status_code=500, detail="Conversion returned empty markdown output")
     return PlainTextResponse(content=markdown, media_type="text/markdown; charset=utf-8")
 
 
