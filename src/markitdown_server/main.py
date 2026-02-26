@@ -9,6 +9,7 @@ from typing import Optional
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, PlainTextResponse
+import markitdown_server.extensions
 from markitdown import MarkItDown
 from pydantic import BaseModel
 
