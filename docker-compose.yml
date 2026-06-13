@@ -6,6 +6,7 @@ services:
       - 8101:8000
     environment:
       - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./uploads:/app/uploads:ro
       - ./logs:/app/logs

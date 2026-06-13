@@ -11,8 +11,10 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, PlainTextResponse
 import markitdown_server.extensions
 from markitdown import MarkItDown
+from markitdown_server.logging import add_request_logging_middleware, configure_logging
 from pydantic import BaseModel
 
+configure_logging()
 LOGGER = logging.getLogger(__name__)
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".ico", ".webp", ".tiff"}
 
@@ -21,6 +23,7 @@ app = FastAPI(
     description="FastAPI service that converts documents to markdown using MarkItDown.",
     version="0.2.0",
 )
+add_request_logging_middleware(app)
 
 markitdown = MarkItDown()
 
@@ -203,6 +206,12 @@ async def health() -> dict[str, str]:
 )
 async def convert_document(file: UploadFile = File(...)) -> PlainTextResponse:
     data = await file.read()
+    LOGGER.info(
+        "Received uploaded document filename=%s content_type=%s size_bytes=%d",
+        file.filename,
+        file.content_type,
+        len(data),
+    )
     markdown = _convert_bytes_to_markdown(data, file.filename)
     return PlainTextResponse(content=markdown, media_type="text/markdown; charset=utf-8")
 
@@ -264,6 +273,12 @@ async def convert_base64_document(request: Base64ConvertRequest) -> JSONResponse
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Invalid base64 content: {exc}") from exc
 
+    LOGGER.info(
+        "Received base64 document filename=%s encoded_chars=%d decoded_bytes=%d",
+        request.filename,
+        len(request.content),
+        len(raw_content),
+    )
     markdown = _convert_bytes_to_markdown(raw_content, request.filename)
     return JSONResponse(
         status_code=200,
