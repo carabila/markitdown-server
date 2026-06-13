@@ -1,0 +1,2 @@
+# Keep uv's package cache inside this project so sandboxed agents can use it.
+cache-dir = "./.uv-cache"
